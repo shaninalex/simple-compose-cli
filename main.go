@@ -30,9 +30,6 @@ var (
 )
 
 func main() {
-
-	// docker compose --file '/job-assignment-app/docker-compose.dev.yml' --project-name 'jobs' stop
-	// docker compose --file '/fastapi_sqlalchemy/docker-compose.yml' --project-name 'fastapi_sqlalchemy' start
 	list := flag.Bool("list", false, "Projects list")
 	name := flag.String("name", "", "Project name.")
 	flag.Parse()
@@ -108,8 +105,12 @@ func main() {
 		"--project-name", project.Name,
 		action,
 	)
+	fmt.Println(cmd.String())
+
 	err = cmd.Run()
 	if err != nil {
 		log.Fatal(err)
+	} else {
+		fmt.Println("Done")
 	}
 }
