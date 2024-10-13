@@ -2,7 +2,12 @@ package main
 
 import (
 	"context"
+	"flag"
 	"fmt"
+	"log"
+	"os"
+	"os/exec"
+	"slices"
 
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/client"
@@ -21,9 +26,16 @@ type Container struct {
 
 var (
 	projects = make(map[string]Project)
+	actions  = []string{"start", "stop"}
 )
 
 func main() {
+
+	// docker compose --file '/job-assignment-app/docker-compose.dev.yml' --project-name 'jobs' stop
+	// docker compose --file '/fastapi_sqlalchemy/docker-compose.yml' --project-name 'fastapi_sqlalchemy' start
+	list := flag.Bool("list", false, "Projects list")
+	name := flag.String("name", "", "Project name.")
+	flag.Parse()
 
 	apiClient, err := client.NewClientWithOpts(client.FromEnv)
 	if err != nil {
@@ -65,14 +77,39 @@ func main() {
 		projects[projectName] = project
 	}
 
-	for k, v := range projects {
-		fmt.Printf("-- %s ( %s )\n", k, v.ConfigPath)
-
-		for _, c := range v.Containers {
-			fmt.Println("-", c.Name)
+	if *list {
+		for k, v := range projects {
+			fmt.Printf("%s\t( %s )\n", k, v.ConfigPath)
 		}
+		return
 	}
 
-	// docker compose --file '/job-assignment-app/docker-compose.dev.yml' --project-name 'jobs' stop
-	// docker compose --file '/fastapi_sqlalchemy/docker-compose.yml' --project-name 'fastapi_sqlalchemy' start
+	if *name == "" {
+		fmt.Println("project name should be provided. See --help")
+		return
+	}
+
+	action := os.Args[len(os.Args)-1]
+
+	if !slices.Contains(actions, action) {
+		fmt.Println("action should be 'run' or 'start'")
+		return
+	}
+
+	project, ok := projects[*name]
+	if !ok {
+		fmt.Printf("project \"%s\" does not exists\n", *name)
+		return
+	}
+
+	cmd := exec.Command(
+		"docker", "compose",
+		"--file", project.ConfigPath,
+		"--project-name", project.Name,
+		action,
+	)
+	err = cmd.Run()
+	if err != nil {
+		log.Fatal(err)
+	}
 }
